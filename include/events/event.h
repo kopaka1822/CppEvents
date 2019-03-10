@@ -1,6 +1,7 @@
 #pragma once
 #include <functional>
 #include <vector>
+#include <mutex>
 
 namespace evnt
 {
@@ -12,12 +13,25 @@ namespace evnt
 	{
 	public:
 		using EventT = Event<TArgs...>;
-
+		
 		Handler(std::function<void(TArgs ...)> function) noexcept;
+		
+		/// \brief creates handler from a class member-function
+		/// \tparam TClass class type
+		/// \tparam TReturn return value of the function will be ignored
+		/// \param object class instance
+		/// \param func member-function pointer
 		template<class TClass, class TReturn>
 		Handler(TClass* object, TReturn(TClass::* func)(TArgs...)) noexcept;
+
+		/// \brief creates handler from a class member-function
+		/// \tparam TClass class type
+		/// \tparam TReturn return value of the function will be ignored
+		/// \param object class instance
+		/// \param func member-function pointer
 		template<class TClass, class TReturn>
 		Handler(const TClass* object, TReturn(TClass::* func)(TArgs...) const) noexcept;
+
 		~Handler();
 		Handler(const Handler<TArgs...>&) = delete;
 		Handler& operator=(const Handler<TArgs...>&) = delete;
@@ -69,7 +83,7 @@ namespace evnt
 		/// \return the new handler
 		HandlerT subscribe(std::function<void(TArgs ...)> function);
 	private:
-		/// adds handler to m_handler but does not add the event to handler->m_subsribed to
+		/// adds handler to m_handler but does not add the event to handler->m_subscribedTo
 		void subscribeConstHandler(HandlerT* handler);
 		/// removed the handler from m_handler but does not remove the event from handler->m_subscribedTo
 		void unsubscribeConstHandler(const HandlerT* handler);
