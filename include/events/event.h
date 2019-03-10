@@ -14,14 +14,21 @@ namespace evnt
 		using EventT = Event<TArgs...>;
 
 		Handler(std::function<void(TArgs ...)> function) noexcept;
+		template<class TClass, class TReturn>
+		Handler(TClass* object, TReturn(TClass::* func)(TArgs...)) noexcept;
+		template<class TClass, class TReturn>
+		Handler(const TClass* object, TReturn(TClass::* func)(TArgs...) const) noexcept;
 		~Handler();
 		Handler(const Handler<TArgs...>&) = delete;
 		Handler& operator=(const Handler<TArgs...>&) = delete;
 		Handler(Handler<TArgs...>&&);
 		Handler& operator=(Handler<TArgs...>&&);
 
+		/// \brief calls function that was given to the constructor
 		void invoke(TArgs ... args) const;
+		/// \brief unsubscribes from all events
 		void reset();
+		/// \brief swaps event subscriptions and the internal function
 		void swap(Handler<TArgs...>& other);
 	private:
 		void removeEvent(EventT* e);
@@ -45,12 +52,22 @@ namespace evnt
 		Event(Event<TArgs...>&&);
 		Event& operator=(Event<TArgs...>&&);
 		~Event();
+		/// \brief calls invoke on all event handlers
 		void invoke(TArgs... args) const;
 
+		/// \brief adds a new event handler
 		void subscribe(HandlerT* handler);
+		/// \brief removes the first occurence of this event handler
 		void unsubscribe(HandlerT* handler);
+		/// \brief removes all handlers
 		void reset();
+		/// \brief swaps event handlers
 		void swap(Event<TArgs...>& other);
+
+		/// \brief creates a new handler and subscribes the handler to this event
+		/// \param function function for handler creation
+		/// \return the new handler
+		HandlerT subscribe(std::function<void(TArgs ...)> function);
 	private:
 		/// adds handler to m_handler but does not add the event to handler->m_subsribed to
 		void subscribeConstHandler(HandlerT* handler);
@@ -69,6 +86,22 @@ namespace evnt
 		m_function(move(function))
 	{
 	}
+
+	template <class ... TArgs>
+	template <class TClass, class TReturn>
+	Handler<TArgs...>::Handler(TClass* object, TReturn( TClass::* func)(TArgs...)) noexcept
+		:
+	m_function([object, func](TArgs args...)
+	{
+		std::invoke(func, object, args...);
+	}){}
+
+	template <class ... TArgs>
+	template <class TClass, class TReturn>
+	Handler<TArgs...>::Handler(const TClass* object, TReturn( TClass::* func)(TArgs...) const) noexcept
+		:
+	Handler(const_cast<TClass*>(object), reinterpret_cast<TReturn(TClass::*)(TArgs...)>(func))
+	{}
 
 	template <class ... TArgs>
 	Handler<TArgs...>::~Handler()
@@ -208,6 +241,14 @@ namespace evnt
 			h->addEvent(this);
 		for (auto h : other.m_handler)
 			h->addEvent(&other);
+	}
+
+	template <class ... TArgs>
+	typename Event<TArgs...>::HandlerT Event<TArgs...>::subscribe(std::function<void(TArgs ...)> function)
+	{
+		HandlerT h(move(function));
+		subscribe(&h);
+		return h;
 	}
 
 	template <class ... TArgs>
