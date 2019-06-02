@@ -105,7 +105,7 @@ namespace evnt
 	template <class TClass, class TReturn>
 	Handler<TArgs...>::Handler(TClass* object, TReturn( TClass::* func)(TArgs...)) noexcept
 		:
-	m_function([object, func](TArgs args...)
+	m_function([object, func](TArgs... args)
 	{
 		std::invoke(func, object, args...);
 	}){}
